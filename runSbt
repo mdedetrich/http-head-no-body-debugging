@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Detect currently logged in cluster
+cluster=`zkubectl cluster-info | cut -d '.' -f2 | head -n 1`
+
+zkubectl login logistics-test > /dev/null 2>&1
+
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+  decode="base64 -di"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  decode="base64 --d"
+fi
+
+TOKEN=`zkubectl get secret returnception-credentials-secrets -ojson |
+        jq '."data"."returnception-service-token-secret"' |
+        tr '"' ' ' |
+        $decode`
+
+# Log back into previous cluster session
+zkubectl login $cluster > /dev/null 2>&1
+
+echo $TOKEN
+sbt -jvm-debug 5005 -mem 4096 -DTOKEN=`echo $TOKEN`
